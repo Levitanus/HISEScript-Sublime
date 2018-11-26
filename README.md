@@ -14,4 +14,5 @@ Usage:
 * Enjoy and contribute ))
 
 <img src="https://i.imgur.com/rQ6Hm4q.gifv"/>
-[Imgur](https://i.imgur.com/rQ6Hm4q.gifv)
+
+![Imgur](https://i.imgur.com/rQ6Hm4q.gifv)
