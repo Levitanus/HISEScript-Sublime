@@ -13,6 +13,9 @@ Usage:
 * Choose HISEScript syntax in View menu
 * Enjoy and contribute ))
 
-<img src="https://i.imgur.com/rQ6Hm4q.gifv"/>
+# keybindings:
+You can also see documentation on method. Paste folowing string in Your key-bindings: ```{"keys": ["ctrl+alt+d"], "command": "hise_show_doc"},```
 
-![Imgur](https://i.imgur.com/rQ6Hm4q.gifv)
+![doc](hisedoc.png?raw=true "Documentation")
+
+![complete](hisecomplete.gif?raw=true "Completion")
