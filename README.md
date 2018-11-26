@@ -13,4 +13,4 @@ Usage:
 * Choose HISEScript syntax in View menu
 * Enjoy and contribute ))
 
-[gif](https://imgur.com/a/1wbX9lt)
+![gif](https://i.imgur.com/rQ6Hm4q.gifv)
