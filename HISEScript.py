@@ -3,6 +3,17 @@ import sublime_plugin
 import re
 
 classes = list()
+supress_completions = False
+
+import os
+import sys
+
+root_path = (os.path.abspath(os.path.dirname(__file__)))
+
+sys.path.append(root_path)
+# print(root_path)
+
+import snippets
 
 
 def add(string, ident):
@@ -174,6 +185,72 @@ def parce_object_classes(lines):
     return classes
 
 
+def parce_math_class(lines):
+    math_class = ApiClass('class Math')
+    curr_clas = 'Math'
+    count = 0
+    doc = 0
+    docbody = list()
+    for line in lines:
+        line = line.strip()
+        if line.startswith("API_METHOD_WRAPPER_1"):
+            curr_clas = line
+            count = 2
+        # if line.find("template") != -1:
+        if count >= 2:
+            if doc == -1:
+                doc = 0
+                if re.match(
+                        r'(?P<return>.+?)\s?\*?(?P<name>\w+?)\(' +
+                        r'(?P<tokens>.*?)\)', line):
+                    # print('valid line:' + line)
+                    math_class.methods.append(ApiMethod(line, docbody))
+            if line.startswith('/**'):
+                doc = 1
+                docbody = list()
+            if doc == 1:
+                docbody.append(line)
+            if line.find('*/') != -1:
+                doc = -1
+    return [math_class]
+
+
+def parce_jsengine_classes(lines):
+    classes = list()
+    curr_clas = str()
+    count = 0
+    doc = 0
+    docbody = list()
+    for line in lines:
+        line = line.strip()
+        if line.find("DoxygenArrayFunctions") != -1:
+            curr_clas = 'class Array:'
+            count = 2
+            classes.append(ApiClass(curr_clas))
+        if line.find("DoxygenStringFunctions") != -1:
+            curr_clas = 'class String:'
+            count = 2
+            classes.append(ApiClass(curr_clas))
+        if line.find("// ======") != -1:
+            count += 1
+        if count >= 2:
+            if doc == -1:
+                doc = 0
+                if re.match(
+                        r'(?P<return>.+?)\s?\*?(?P<name>\w+?)\(' +
+                        r'(?P<tokens>.*?)\)', line):
+                    # print('valid line:' + line)
+                    classes[-1].methods.append(ApiMethod(line, docbody))
+            if line.startswith('/**'):
+                doc = 1
+                docbody = list()
+            if doc == 1:
+                docbody.append(line)
+            if line.find('*/') != -1:
+                doc = -1
+    return classes
+
+
 class HiseCompletion(sublime_plugin.EventListener):
     is_class = object()
     is_object = object()
@@ -187,18 +264,37 @@ class HiseCompletion(sublime_plugin.EventListener):
                 prefix = view.substr(view.word(locations[0] - 1))
         out = list()
         # out.append(['name\tright','completion ${1:first} and $2second'])
-        print(scope)
+        # print(scope)
         for clas in classes:
+            if clas.name.startswith(prefix) and \
+                    scope.find("meta.property.object.js") == -1:
+                out.append(['%s\t%s class: HISE' % (clas.name, clas.name),
+                            clas.name])
             for method in clas.methods:
                 is_class = False
                 if clas.name.startswith(prefix):
                     is_class = True
+                    if scope.find("meta.property.object.js") == -1:
+                        is_class = 2
                 if method.name.find(prefix) != -1:
                     if scope.find('variable') != -1:
-                        is_class = True
+                        is_class = 2
                 out.append(
                     self.make_completion(clas, method, is_class))
-        return out
+        # print(snippets.sn_list)
+        # out.extend(snippets.sn_list)
+        for snippet in snippets.sn_list:
+            if snippet[0].startswith(prefix):
+                out.append(snippet)
+        global supress_completions
+        # print('supress:', supress_completions)
+        flags = 0
+        # flags |= sublime.INHIBIT_WORD_COMPLETIONS if supress_completions else 0
+        flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS if supress_completions else 0
+        if supress_completions:
+            print('supressed')
+        #     flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+        return (out, flags)
 
     def make_completion(self, clas, method, is_class):
         tokens_list = method.tokens.split(',')
@@ -217,8 +313,11 @@ class HiseCompletion(sublime_plugin.EventListener):
             tokens=tokens)
         out = list()
         if is_class:
-            for item in (trigger, content):
-                out.append(clas.name + '.' + item)
+            out.append(clas.name + '.' + trigger)
+            if is_class == 2:
+                out.append(clas.name + '.' + content)
+            else:
+                out.append(content)
         else:
             out = [trigger, content]
         # print(out)
@@ -260,20 +359,34 @@ def error():
         C:/HISE-master, for example''')
 
 
+def update_supress(settings):
+    global supress_completions
+    supress_completions = settings.get('hise_supress_completions', False)
+    # print('update_supress: ', supress_completions)
+
+
 def plugin_loaded():
     settings = sublime.load_settings('HISEScript.sublime-settings')
     hise_path = settings.get('hise_path')
-    print(settings)
-    print(settings.has('hise_path'))
-    print(hise_path)
+    settings.add_on_change('supress_completions',
+                           lambda: update_supress(settings))
+    update_supress(settings)
+    # print(settings)
+    # print(settings.has('hise_path'))
+    # print(hise_path)
     try:
         api_path = hise_path + '/hi_scripting/scripting/api/'
     except TypeError:
         error()
         # classes = list()
+    engine_path = hise_path + '/hi_scripting/scripting/engine/'
+
     core_path = api_path + 'ScriptingApi.h'
     content_path = api_path + 'ScriptingApiContent.h'
     objects_path = api_path + 'ScriptingApiObjects.h'
+
+    math_path = engine_path + 'JavascriptEngineMathObject.cpp'
+    jsengine_path = engine_path + 'JavascriptEngineObjects.cpp'
 
     try:
         with open(core_path, 'r') as f:
@@ -284,12 +397,18 @@ def plugin_loaded():
         content = f.readlines()
     with open(objects_path, 'r') as f:
         objects = f.readlines()
+    with open(math_path, 'r') as f:
+        math = f.readlines()
+    with open(jsengine_path, 'r') as f:
+        jsengine = f.readlines()
 
     global classes
     classes = list()
     classes.extend(parce_core_classes(core))
     classes.extend(parce_content_classes(content))
     classes.extend(parce_object_classes(objects))
+    classes.extend(parce_math_class(math))
+    classes.extend(parce_jsengine_classes(jsengine))
 
 
 class HiseReloadCommand(sublime_plugin.WindowCommand):

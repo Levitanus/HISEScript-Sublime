@@ -1,0 +1,19 @@
+%YAML 1.2
+---
+name: HISEScript_old
+# See http://www.sublimetext.com/docs/3/syntax.html
+file_extensions:
+  - js
+scope: source.js
+contexts:
+  main:
+    # Strings begin and end with quotes, and use backslashes as an escape
+    # character
+    - match: ""
+      push: 'JavaScript.sublime-syntax'
+      with_prototype:
+        - include: additional_keywords
+
+  additional_keywords:
+    - match: (?:reg|const var|const function|namespace)
+      scope: storage.type.js

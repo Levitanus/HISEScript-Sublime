@@ -1,0 +1,3 @@
+[
+    {"keys": ["ctrl+alt+d"], "command": "hise_show_doc"},
+]
