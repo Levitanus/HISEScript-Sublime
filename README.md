@@ -2,13 +2,14 @@
 
 is a little project trying to integrate HISE (hise.audio, https://github.com/christophhart/HISE) JS API into the Sublime Text
 
-## Instalation:
+## Installation:
 copy contents of the Repository into the ST Packages folder
+rename the folder to ``HISEScript`` if necessary.
 
 Usage:
 
 * Read the message about wrong path
-* set the path via changing the settings file (from Preferences menu) ```"hise_path": "C:/HISE-master"```
+* set the path via changing the settings file (**Package Settings > HISEScript > Settings - User**) ```"hise_path": "C:/HISE-master"```
 * reload API and make sure error hasn't appear
 * Choose HISEScript syntax in View menu
 * Enjoy and contribute ))
@@ -19,8 +20,8 @@ Usage:
 
 ![completions](hise_completions.png?raw=true "Completions")
 
-## keybindings:
-You can also see documentation on method. Paste folowing string in Your key-bindings: 
+## key bindings:
+You can also see documentation on method. Paste following string in Your key-bindings: 
 
     {"keys": ["ctrl+alt+d"], "command": "hise_show_doc"}
 
@@ -32,7 +33,7 @@ HISE source folder to parse available classes
 
     "hise_path": "C:/HISE-master"
 
-Optionally supress completions from sublime-completion files
+Optionally suppress completions from sublime-completion files
 
     "hise_supress_completions": false
 
@@ -54,4 +55,4 @@ Optionally supress completions from sublime-completion files
 
 **changed:**
 
-* Now syntax is copy of standart Javascript with additions to native scopes, not just added scopes.
+* Now syntax is copy of standard Javascript with additions to native scopes, not just added scopes.
