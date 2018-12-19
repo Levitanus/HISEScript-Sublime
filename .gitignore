@@ -1,2 +1,6 @@
 
 HISEScript\.sublime-workspace
+
+*.sublime-project
+
+*.sublime-workspace

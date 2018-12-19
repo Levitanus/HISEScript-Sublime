@@ -1,19 +1,15 @@
 import sublime
 import sublime_plugin
 import re
+from . import snippets
+
+
+from os.path import abspath
+from os.path import normpath
+
 
 classes = list()
-supress_completions = False
-
-import os
-import sys
-
-root_path = (os.path.abspath(os.path.dirname(__file__)))
-
-sys.path.append(root_path)
-# print(root_path)
-
-import snippets
+settings = None
 
 
 def add(string, ident):
@@ -33,7 +29,6 @@ class ApiMethod:
         self.parce(decl_line)
 
     def parce(self, line):
-        # print(line)
         m = re.match(
             r'(?P<return>.+?)\s?\*?(?P<name>\w+?)\((?P<tokens>.*?)\)', line)
         self.name = m.group('name')
@@ -44,7 +39,6 @@ class ApiMethod:
         out = list()
         for line in doc:
             line = re.sub(r'/\*\*', '', line)
-            # line = re.sub(r'\S', '', line)
             line = re.sub(r'\*/', '', line)
             line = re.sub(r'\*', '', line)
             line = line.strip()
@@ -66,7 +60,6 @@ class ApiClass:
         self.name = re.match(
             r'((class)|(struct)) (?P<class>\w+?)\b',
             name).group('class').strip()
-        # print(self.name)
         self.methods = list()
 
     def __str__(self):
@@ -122,22 +115,17 @@ def parce_content_classes(lines):
             content_class = True
             count = 0
         if line.startswith("struct"):
-            # print("line.startswith(struct):")
             curr_clas = line
             count = 0
         if line.find(" ======") != -1:
-            # print("line.find(' ======') != -1 and count == 1:")
             if count == 1:
                 count = 0
             if content_class:
                 count = 1
         if re.search('api methods', line, re.I):
-            # print("re.search('api methods', line, re.I)")
-            # print(curr_clas)
             classes.append(ApiClass(curr_clas))
             count = 1
         if count == 1:
-            # print("count == 1:")
             if doc == -1:
                 doc = 0
                 classes[-1].methods.append(ApiMethod(line, docbody))
@@ -165,7 +153,6 @@ def parce_object_classes(lines):
         if line.find("// ======") != -1:
             count += 1
             if count == 2:
-                # print(curr_clas)
                 classes.append(ApiClass(curr_clas))
         if count >= 2:
             if doc == -1:
@@ -173,7 +160,6 @@ def parce_object_classes(lines):
                 if re.match(
                         r'(?P<return>.+?)\s?\*?(?P<name>\w+?)\(' +
                         r'(?P<tokens>.*?)\)', line):
-                    # print('valid line:' + line)
                     classes[-1].methods.append(ApiMethod(line, docbody))
             if line.startswith('/**'):
                 doc = 1
@@ -187,23 +173,21 @@ def parce_object_classes(lines):
 
 def parce_math_class(lines):
     math_class = ApiClass('class Math')
-    curr_clas = 'Math'
+    # curr_clas = 'Math'
     count = 0
     doc = 0
     docbody = list()
     for line in lines:
         line = line.strip()
         if line.startswith("API_METHOD_WRAPPER_1"):
-            curr_clas = line
+            # curr_clas = line
             count = 2
-        # if line.find("template") != -1:
         if count >= 2:
             if doc == -1:
                 doc = 0
                 if re.match(
                         r'(?P<return>.+?)\s?\*?(?P<name>\w+?)\(' +
                         r'(?P<tokens>.*?)\)', line):
-                    # print('valid line:' + line)
                     math_class.methods.append(ApiMethod(line, docbody))
             if line.startswith('/**'):
                 doc = 1
@@ -239,7 +223,6 @@ def parce_jsengine_classes(lines):
                 if re.match(
                         r'(?P<return>.+?)\s?\*?(?P<name>\w+?)\(' +
                         r'(?P<tokens>.*?)\)', line):
-                    # print('valid line:' + line)
                     classes[-1].methods.append(ApiMethod(line, docbody))
             if line.startswith('/**'):
                 doc = 1
@@ -263,8 +246,6 @@ class HiseCompletion(sublime_plugin.EventListener):
             if view.substr(locations[0] - 1) == '.':
                 prefix = view.substr(view.word(locations[0] - 1))
         out = list()
-        # out.append(['name\tright','completion ${1:first} and $2second'])
-        # print(scope)
         for clas in classes:
             if clas.name.startswith(prefix) and \
                     scope.find("meta.property.object.js") == -1:
@@ -281,30 +262,21 @@ class HiseCompletion(sublime_plugin.EventListener):
                         is_class = 2
                 out.append(
                     self.make_completion(clas, method, is_class))
-        # print(snippets.sn_list)
-        # out.extend(snippets.sn_list)
         for snippet in snippets.sn_list:
             if snippet[0].startswith(prefix):
                 out.append(snippet)
-        global supress_completions
-        # print('supress:', supress_completions)
         flags = 0
-        # flags |= sublime.INHIBIT_WORD_COMPLETIONS if supress_completions else 0
-        flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS if supress_completions else 0
-        if supress_completions:
-            print('supressed')
-        #     flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+        flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS if settings.get(
+            'hise_supress_completions', False) else 0
         return (out, flags)
 
     def make_completion(self, clas, method, is_class):
         tokens_list = method.tokens.split(',')
-        # print(tokens_list)
         tokens = list()
         for idx, token in enumerate(tokens_list):
             tokens.append('${%s:%s}' % (
                 idx + 1, token.strip()))
         tokens = ','.join(tokens)
-        # print(tokens)
         trigger = "{name}\t{clas}: HISE".format(
             clas=clas.name,
             name=method.name)
@@ -320,7 +292,6 @@ class HiseCompletion(sublime_plugin.EventListener):
                 out.append(content)
         else:
             out = [trigger, content]
-        # print(out)
         return out
 
 
@@ -351,34 +322,20 @@ class HiseShowDocCommand(sublime_plugin.TextCommand):
         return out
 
 
-# hise_path = 'C:/HISE-master'
-
 def error():
     return sublime.error_message(
         '''Wrong HISE path. Put to the settings a valid HISE path.
         C:/HISE-master, for example''')
 
 
-def update_supress(settings):
-    global supress_completions
-    supress_completions = settings.get('hise_supress_completions', False)
-    # print('update_supress: ', supress_completions)
-
-
 def plugin_loaded():
+    global settings
     settings = sublime.load_settings('HISEScript.sublime-settings')
     hise_path = settings.get('hise_path')
-    settings.add_on_change('supress_completions',
-                           lambda: update_supress(settings))
-    update_supress(settings)
-    # print(settings)
-    # print(settings.has('hise_path'))
-    # print(hise_path)
     try:
         api_path = hise_path + '/hi_scripting/scripting/api/'
     except TypeError:
         error()
-        # classes = list()
     engine_path = hise_path + '/hi_scripting/scripting/engine/'
 
     core_path = api_path + 'ScriptingApi.h'
@@ -389,17 +346,17 @@ def plugin_loaded():
     jsengine_path = engine_path + 'JavascriptEngineObjects.cpp'
 
     try:
-        with open(core_path, 'r') as f:
+        with open(normpath(abspath(core_path)), 'r') as f:
             core = f.readlines()
     except FileNotFoundError:
         error()
-    with open(content_path, 'r') as f:
+    with open(normpath(abspath(content_path)), 'r') as f:
         content = f.readlines()
-    with open(objects_path, 'r') as f:
+    with open(normpath(abspath(objects_path)), 'r') as f:
         objects = f.readlines()
-    with open(math_path, 'r') as f:
+    with open(normpath(abspath(math_path)), 'r') as f:
         math = f.readlines()
-    with open(jsengine_path, 'r') as f:
+    with open(normpath(abspath(jsengine_path)), 'r') as f:
         jsengine = f.readlines()
 
     global classes
