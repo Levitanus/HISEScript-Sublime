@@ -3,7 +3,8 @@
 is a little project trying to integrate HISE (hise.audio, https://github.com/christophhart/HISE) JS API into the Sublime Text
 
 ## Installation:
-copy contents of the Repository into the ST Packages folder
+* Via [PackageControl](https://packagecontrol.io/). `ctrl+shift+p -> install package -> HISE Script`
+* mannualy: copy contents of the Repository into the ST Packages folder
 rename the folder to ``HISEScript`` if necessary.
 
 Usage:
